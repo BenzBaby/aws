@@ -2479,8 +2479,7 @@ from .models import UserProfile
 from datetime import datetime
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense
+
 
 def predict_next_lap(request, user_id):
     # Retrieve the user profile
