@@ -1,0 +1,193 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predict Lap Times</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-repeat: no-repeat; /* Prevent background image from repeating */
+            background-image: url('{% static "images/bike.jpg" %}');
+            background-size: cover; /* Cover the entire container */
+            background-position: center; /* Center the background image */
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-image: url('{% static "images/amg.jpg" %}');
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background-repeat: no-repeat; /* Prevent background image from repeating */
+            background-size: cover; /* Cover the entire container */
+            background-position: center; /* Center the background image */
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .rider-block {
+            width: calc(29.90% - 30px); /* Adjusted width to fit three blocks */
+            margin-right: 20px;
+            margin-bottom: 20px; /* Added margin bottom for spacing */
+            padding: 20px;
+            background-color: rgba(300, 249, 249, 0.8);
+            border-radius: 18px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+            vertical-align: top;
+            transition: transform 0.3s ease;
+        }
+        
+        .rider-block:hover {
+            transform: translateY(-5px);
+        }
+
+        .lap-times {
+            margin-top: 10px;
+            padding-left: 0;
+        }
+
+        .lap-times li {
+            margin-bottom: 10px;
+        }
+
+        button {
+            display: block;
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .predicted-time {
+            font-weight: bold;
+            margin-top: 10px;
+            color: red;
+            font-size: 18px;
+            animation: fadeIn 1s ease;
+            display: none;
+        }
+
+        .loading {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #4CAF50;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+            visibility: hidden;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        .loading.active {
+            visibility: visible;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Lap Time Prediction</h1>
+        
+        {% for user_profile in all_user_profiles %}
+        <div class="rider-block">
+            <h2>{{ user_profile.user.username }}</h2>
+            <ul class="lap-times">
+                {% for lap_time in user_profile.get_past_lap_times %}
+                <li>{{ lap_time }}</li>
+                {% endfor %}
+            </ul>
+            <span class="predicted-time"></span>
+            <div class="loading"></div>
+            {% if user_profile.get_past_lap_times|length >= 4 %}
+                <button class="predict-btn" data-userid="{{ user_profile.user.id }}">Predict Lap Time</button>
+            {% else %}
+                <span class="predict-msg">At least 4 lap times required for prediction</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const predictButtons = document.querySelectorAll('.predict-btn');
+            predictButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const userId = this.getAttribute('data-userid');
+                    const loadingIndicator = this.parentElement.querySelector('.loading');
+                    const predictedTimeSpan = this.parentElement.querySelector('.predicted-time');
+                    loadingIndicator.classList.add('active');
+                    predictNextLapTime(userId, loadingIndicator, predictedTimeSpan);
+                });
+            });
+
+            function predictNextLapTime(userId, loadingIndicator, predictedTimeSpan) {
+                fetch(`/predict_next_lap/${userId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            predictedTimeSpan.textContent = data.error;
+                        } else {
+                            const predictedTime = data.predicted_time;
+                            predictedTimeSpan.textContent = `Predicted lap time: ${predictedTime}`;
+                            const lapTimeInSeconds = lapTimeToSeconds(predictedTime);
+                            displaySkillLevel(lapTimeInSeconds, predictedTimeSpan);
+                        }
+                        predictedTimeSpan.style.display = 'block';
+                        loadingIndicator.classList.remove('active');
+                    })
+                    .catch(error => {
+                        console.error('Error predicting lap time:', error);
+                        loadingIndicator.classList.remove('active');
+                    });
+            }
+
+            function lapTimeToSeconds(lapTime) {
+                const [minutes, seconds] = lapTime.split(':');
+                return parseInt(minutes) * 60 + parseInt(seconds);
+            }
+
+            function displaySkillLevel(lapTimeInSeconds, predictedTimeSpan) {
+                let skillLevel = '';
+                if (lapTimeInSeconds < 90) {
+                    skillLevel = 'Pro Level';
+                } else if (lapTimeInSeconds < 150) {
+                    skillLevel = 'Intermediate Level';
+                } else {
+                    skillLevel = 'Beginner Level';
+                }
+                predictedTimeSpan.insertAdjacentHTML('beforeend', `<br> Skill Level: ${skillLevel}`);
+            }
+        });
+    </script>
+</body>
+</html>

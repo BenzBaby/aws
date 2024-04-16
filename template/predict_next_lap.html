@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predict Next Lap</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th, td {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        ul {
+            margin: 0;
+            padding: 0;
+        }
+
+        li {
+            list-style: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Predict Next Lap Time for All Riders</h1>
+    
+    <table id="lapTimeTable">
+        <thead>
+            <tr>
+                <th>Rider</th>
+                <th>Past Lap Times</th>
+                <th>Predicted Next Lap Time</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user_profile in all_user_profiles %}
+                <tr>
+                    <td>{{ user_profile.user.username }}</td>
+                    <td>
+                        <ul>
+                            {% for lap_time in user_profile.get_past_lap_times %}
+                                <li>{{ lap_time }}</li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                    <td id="predicted-lap-time-{{ user_profile.user.id }}">Loading...</td>  <!-- Placeholder for predicted lap time -->
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <button onclick="downloadCSV()">Download CSV</button>
+
+    <script>
+        function predictNextLapTimes() {
+            fetch(`/predict-all-lap-times/`)
+                .then(response => response.json())
+                .then(data => {
+                    for (const userId in data) {
+                        if (data.hasOwnProperty(userId)) {
+                            const predictedLapTimeElement = document.getElementById(`predicted-lap-time-${userId}`);
+                            predictedLapTimeElement.innerText = data[userId].predicted_time;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching predicted lap times:', error);
+                });
+        }
+    
+        // Call predictNextLapTimes function to fetch and display predicted lap times for all users
+        predictNextLapTimes();
+    </script>
+    
+    
+</body>
+</html>
